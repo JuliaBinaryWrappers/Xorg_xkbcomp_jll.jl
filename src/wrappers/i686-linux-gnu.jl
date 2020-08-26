@@ -6,6 +6,7 @@ using Xorg_libxkbfile_jll
 PATH = ""
 LIBPATH = ""
 LIBPATH_env = "LD_LIBRARY_PATH"
+LIBPATH_default = ""
 
 # Relative path to `xkbcomp`
 const xkbcomp_splitpath = ["bin", "xkbcomp"]
@@ -25,8 +26,9 @@ function xkbcomp(f::Function; adjust_PATH::Bool = true, adjust_LIBPATH::Bool = t
         end
     end
     if adjust_LIBPATH
-        if !isempty(get(ENV, LIBPATH_env, ""))
-            env_mapping[LIBPATH_env] = string(LIBPATH, ':', ENV[LIBPATH_env])
+        LIBPATH_base = get(ENV, LIBPATH_env, expanduser(LIBPATH_default))
+        if !isempty(LIBPATH_base)
+            env_mapping[LIBPATH_env] = string(LIBPATH, ':', LIBPATH_base)
         else
             env_mapping[LIBPATH_env] = LIBPATH
         end
@@ -45,8 +47,6 @@ function __init__()
 
     # Initialize PATH and LIBPATH environment variable listings
     global PATH_list, LIBPATH_list
-    # We first need to add to LIBPATH_list the libraries provided by Julia
-    append!(LIBPATH_list, [joinpath(Sys.BINDIR, Base.LIBDIR, "julia"), joinpath(Sys.BINDIR, Base.LIBDIR)])
     # From the list of our dependencies, generate a tuple of all the PATH and LIBPATH lists,
     # then append them to our own.
     foreach(p -> append!(PATH_list, p), (Xorg_libxkbfile_jll.PATH_list,))
@@ -59,12 +59,8 @@ function __init__()
     filter!(!isempty, unique!(PATH_list))
     filter!(!isempty, unique!(LIBPATH_list))
     global PATH = join(PATH_list, ':')
-    global LIBPATH = join(LIBPATH_list, ':')
+    global LIBPATH = join(vcat(LIBPATH_list, [joinpath(Sys.BINDIR, Base.LIBDIR, "julia"), joinpath(Sys.BINDIR, Base.LIBDIR)]), ':')
 
-    # Add each element of LIBPATH to our DL_LOAD_PATH (necessary on platforms
-    # that don't honor our "already opened" trick)
-    #for lp in LIBPATH_list
-    #    push!(DL_LOAD_PATH, lp)
-    #end
+    
 end  # __init__()
 
